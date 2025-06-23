@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deepfake Detector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="icon" href="https://www.onlygfx.com/wp-content/uploads/2017/12/fake-stamp-3.png">
+  </head>
+  <body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+      <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+          <h1 class="text-4xl font-bold mb-4 text-blue-500">
+            Deepfake Detector
+          </h1>
+          <p class="text-gray-400">
+            Upload an image to detect if it's real or fake
+          </p>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="bg-gray-800 rounded-lg p-8 mb-8 transform transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20">
+          <label
+            for="file-input"
+            id="drop-zone"
+            class="block border-2 border-dashed border-gray-600 rounded-lg p-8 text-center cursor-pointer hover:border-blue-500 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
+          >
+            <div id="preview-container" class="hidden mb-4">
+              <img
+                id="preview-image"
+                class="max-w-full h-auto mx-auto rounded-lg"
+                src=""
+                alt="Preview"
+              />
+            </div>
+            <div id="upload-prompt">
+              <svg
+                class="mx-auto h-12 w-12 text-gray-400 mb-4 pointer-events-none"
+                stroke="currentColor"
+                fill="none"
+                viewBox="0 0 48 48"
+              >
+                <path
+                  d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+              <p class="text-gray-400">
+                Drag and drop an image here, or click to select
+              </p>
+            </div>
+          </label>
+          <input type="file" id="file-input" class="hidden" accept="image/*" />
+        </div>
+
+        <!-- Detection Button -->
+        <div class="text-center mb-8">
+          <button
+            id="detect-btn"
+            class="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-8 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:from-blue-700 hover:to-blue-800 transition-all duration-300 transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/50 active:scale-95"
+            disabled
+          >
+            Detect
+          </button>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden text-center mb-8">
+          <div class="flex flex-col items-center gap-3 animate__animated animate__fadeIn">
+            <div class="relative">
+              <div class="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full animate-ping opacity-20"></div>
+              <div class="relative inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+            <p class="text-gray-400 animate-pulse">Menganalisis gambar...</p>
+          </div>
+        </div>
+
+        <!-- Result Area -->
+        <div id="result" class="hidden bg-gray-800 rounded-lg p-8 text-center transform transition-all duration-300 hover:scale-105">
+          <h2 class="text-2xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-500">Hasil Analisis</h2>
+          <div id="result-content"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      $(function () {
+        const dropZone = $("#drop-zone");
+        const fileInput = $("#file-input");
+        const detectBtn = $("#detect-btn");
+        const loading = $("#loading");
+        const result = $("#result");
+        const previewContainer = $("#preview-container");
+        const previewImage = $("#preview-image");
+        const uploadPrompt = $("#upload-prompt");
+
+        // Handle drag over
+        dropZone.on("dragover", function (e) {
+          e.preventDefault();
+          dropZone.addClass("border-blue-500");
+        });
+
+        // Handle drag leave
+        dropZone.on("dragleave", function (e) {
+          e.preventDefault();
+          dropZone.removeClass("border-blue-500");
+        });
+
+        // Handle file drop
+        dropZone.on("drop", function (e) {
+          e.preventDefault();
+          dropZone.removeClass("border-blue-500");
+          const files = e.originalEvent.dataTransfer.files;
+          if (files.length > 0) {
+            handleFile(files[0]);
+          }
+        });
+
+
+        // Handle file selection
+        fileInput.on("change", function () {
+          if (this.files.length > 0) {
+            handleFile(this.files[0]);
+          }
+        });
+
+        // Function to preview file and enable detect button
+        function handleFile(file) {
+          if (!file || !file.type.startsWith("image/")) {
+            Swal.fire({
+              title: 'Oops!',
+              text: 'File yang kamu pilih bukan gambar nih. Yuk pilih file gambar ya! 📸',
+              icon: 'warning',
+              confirmButtonText: 'Oke',
+              confirmButtonColor: '#3B82F6'
+            });
+            return;
+          }
+
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+              // Buat canvas untuk analisis gambar
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+
+              // Analisis warna untuk deteksi topeng
+              const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+              const data = imageData.data;
+              let skinToneCount = 0;
+              let totalPixels = data.length / 4;
+
+              // Deteksi warna kulit dan area putih/hitam solid
+              for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                // Deteksi warna kulit (menggunakan range RGB umum untuk warna kulit)
+                if ((r > 120 && r < 250) && (g > 80 && g < 200) && (b > 50 && b < 170)) {
+                  skinToneCount++;
+                }
+              }
+
+              const skinToneRatio = skinToneCount / totalPixels;
+
+              // Jika rasio warna kulit terlalu rendah, kemungkinan menggunakan topeng
+              if (skinToneRatio < 0.1) {
+                Swal.fire({
+                  title: 'Hmm... 🤔',
+                  text: 'Sepertinya kamu menggunakan topeng atau filter. Yuk upload foto wajah asli kamu!',
+                  icon: 'info',
+                  confirmButtonText: 'Siap!',
+                  confirmButtonColor: '#3B82F6',
+                  showClass: {
+                    popup: 'animate__animated animate__fadeInDown'
+                  },
+                  hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp'
+                  }
+                });
+                fileInput.val('');
+                previewContainer.addClass('hidden');
+                uploadPrompt.removeClass('hidden');
+                detectBtn.prop('disabled', true);
+                return;
+              }
+
+              // Lanjutkan dengan preview jika validasi berhasil
+              previewImage.attr("src", e.target.result);
+              previewContainer.removeClass("hidden");
+              uploadPrompt.addClass("hidden");
+              detectBtn.prop("disabled", false);
+              result.addClass("hidden");
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+
+        // Handle detect button click
+        detectBtn.on("click", function () {
+          const file = fileInput[0].files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append("file", file);
+
+          loading.removeClass("hidden");
+          detectBtn.prop("disabled", true);
+          result.addClass("hidden");
+
+          $.ajax({
+            url: "/detect",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (response) {
+              loading.addClass("hidden");
+              detectBtn.prop("disabled", false);
+              result.removeClass("hidden");
+
+              if (response.success) {
+                const isReal = response.result === "REAL";
+                const resultClass = isReal ? "text-green-500" : "text-red-500";
+                const emoji = isReal ? "✅" : "❌";
+                const message = isReal ? "Ini foto asli!" : "Ini deepfake!";
+                
+                $("#result-content").html(`
+                  <div class="animate__animated animate__bounceIn">
+                    <p class="${resultClass} text-5xl font-bold mb-4">${emoji}</p>
+                    <p class="${resultClass} text-3xl font-bold mb-2">${message}</p>
+                    <div class="flex items-center justify-center gap-2 mb-4">
+                      <div class="h-2 w-32 bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full ${resultClass} transition-all duration-1000 ease-out" 
+                             style="width: ${response.confidence.toFixed(2)}%"></div>
+                      </div>
+                      <p class="text-gray-400 text-sm">Keyakinan: ${response.confidence.toFixed(2)}%</p>
+                    </div>
+                  </div>
+                `);
+              } else {
+                $("#result-content").html(`
+              <p class="text-red-500">Error: ${response.error}</p>
+            `);
+              }
+            },
+            error: function () {
+              loading.addClass("hidden");
+              detectBtn.prop("disabled", false);
+              result.removeClass("hidden");
+              Swal.fire({
+                title: 'Waduh! 😅',
+                text: 'Ada yang tidak beres nih. Yuk coba lagi!',
+                icon: 'error',
+                confirmButtonText: 'Oke',
+                confirmButtonColor: '#3B82F6'
+              });
+              $("#result-content").html(`
+                <p class="text-red-500 text-xl">Gagal memproses gambar 😔</p>
+              `);
+            },
+          });
+        });
+      });
+    </script>
+  </body>
+</html>
