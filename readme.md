@@ -15,32 +15,22 @@ A Python-based application that detects manipulated (deepfake) content in images
 ## 👨‍💻 Author
 Akbar Maulana
 
-## 📁 Project Structure
-
-deepfake/
-├── Dataset/ # Dataset folder (ignored in Git)
-├── app.py # Main Flask application
-├── gui.py # Tkinter GUI application
-├── model/ # Saved trained model files
-├── static/ # Static assets for Flask (e.g., CSS, JS)
-├── templates/ # HTML templates for Flask
-├── venv/ # Python virtual environment (ignored)
-├── requirements.txt # Dependency list
-└── README.md # Project documentation
-
-
 > Deepfake Detection App
 
 ## Penggunaan di local server
 
 ```bash
 git clone https://github.com/akbarmaulana1501/project_cv.git
+```
 
-
+```bash
 cd deepfake && pip install -r requirements.txt
+```
 
-
+```bash
 python -m venv venv
-venv\Scripts\activate 
-
+venv\Scripts\activate
+```
+```bash
 python predict.py
+```
