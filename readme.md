@@ -1,6 +1,8 @@
 # 🧠 Deepfake Image Detection App
 
 A Python-based application that detects manipulated (deepfake) content in images using a pre-trained TensorFlow model. The app features both a web interface (Flask) and a desktop GUI (Tkinter), with support for multithreading and real-time image analysis.
+datasets : https://www.kaggle.com/datasets/manjilkarki/deepfake-and-real-images/data
+
 
 ## 🚀 Features
 
